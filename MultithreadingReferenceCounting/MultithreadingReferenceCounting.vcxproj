@@ -113,6 +113,7 @@
     <Text Include="..\handout.txt" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\cuj-2004-10.pdf" />
     <None Include="..\Makefile" />
     <None Include="..\Makefile2" />
     <None Include="..\out0" />
@@ -122,6 +123,12 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\driver.cpp" />
+    <ClCompile Include="..\lfsv.cpp" />
+    <ClCompile Include="..\lockfree_sorted_vector_fixleak_1.cpp" />
+    <ClCompile Include="..\lockfree_sorted_vector_fixleak_2.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\lfsv.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -38,10 +38,27 @@
     <None Include="..\out3">
       <Filter>Resource Files</Filter>
     </None>
+    <None Include="..\cuj-2004-10.pdf">
+      <Filter>Resource Files</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\driver.cpp">
+    <ClCompile Include="..\lockfree_sorted_vector_fixleak_1.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\lockfree_sorted_vector_fixleak_2.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\driver.cpp">
+      <Filter>Resource Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\lfsv.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\lfsv.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
