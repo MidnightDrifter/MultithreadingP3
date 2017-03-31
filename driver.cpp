@@ -35,8 +35,14 @@ void read_position_0() {
 void test( int num_threads, int num_per_thread )
 {
     std::vector<std::thread> threads;
-    lfsv.Insert( -1 );
-    std::thread reader = std::thread( read_position_0 );
+//    lfsv.Insert( -1 );
+//	lfsv.Insert(0);
+//	lfsv.Insert(1);
+//	for(int i=0;i<3;i++)
+//		std::cout << lfsv[i] << ' ';
+
+
+	std::thread reader = std::thread( read_position_0 );
 
     for (int i=0; i<num_threads; ++i) {
         threads.push_back( std::thread( insert_range, i*num_per_thread, (i+1)*num_per_thread ) );
@@ -47,7 +53,7 @@ void test( int num_threads, int num_per_thread )
     reader.join();
 
     for (int i=0; i<num_threads*num_per_thread; ++i) { 
-        //        std::cout << lfsv[i] << ' '; 
+              //  std::cout << lfsv[i] << ' '; 
         if ( lfsv[i] != i-1 ) {
             std::cout << "Error\n";
             return;
