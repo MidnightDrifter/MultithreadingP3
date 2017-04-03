@@ -104,6 +104,8 @@ public:
 		}
 	}
 
+
+	
 	void Insert(int const & v)
 	{
 		//std::vector<int> *pdata_new = nullptr, *pdata_old;
@@ -273,30 +275,82 @@ public:
 	//	std::vector<int>* test = pdata.load()->data;
 	//	int bob = test->at(0);
 
-		pdata_new = pdata;
+	//	pdata_new = pdata;
 		++pdata_new.count;
 		do
 		{
 			pdata_old = pdata;
 			pdata_new = pdata_old;
-			
+			//++pdata_new.count;
 
 		} while (!((pdata).compare_exchange_weak(pdata_new, pdata_old)));
 		//int out = pdata_new->data->at(pos);
 		
-		--pdata_old.count;
+		--pdata_new.count;
 		do
 		{
 			pdata_old = pdata;
 			pdata_new = pdata_old;
+		//	--pdata_new.count;
 			
 		} while (!((pdata).compare_exchange_weak(pdata_new, pdata_old)));
 
-		return pdata_new.data->at(pos);
+		return pdata.load().data->at(pos);
 	}
 	//const;
 	//Requires, bare minimum: Insert method, [] operator
 	//int operator[](int i) { return 0; }
 	//void Insert(int i){}
+
+
+
+	//void Insert(int const& v)
+	//{
+	//	Data pdata_new, pdata_old;
+	//	std::vector<int>* last = 0;
+
+	//	do
+	//	{
+	//		pdata_old.data = pdata.load().data;
+	//		if (last != pdata_old.data)
+	//		{
+	//			pdata_new.data->~vector();
+	//			mb.Store(pdata_new.data);
+
+	//			pdata_new.data = new(mb.Get()) std::vector<int>(*pdata_old.data);
+
+
+
+	//					            std::vector<int>::iterator b = pdata_new.data->begin();
+	//					            std::vector<int>::iterator e = pdata_new.data->end();
+	//					            if ( b==e || v>=pdata_new.data->back() ) { pdata_new.data->push_back( v ); } //first in empty or last element
+	//					            else {
+	//					                for ( ; b!=e; ++b ) {
+	//					                    if ( *b >= v ) {
+	//					                        pdata_new.data->insert( b, v );
+	//					                        break;
+	//					                    }
+	//					                }
+	//					            }
+
+
+	//								last = pdata_old.data;
+
+
+	//			//pdata_new.data->
+	//		}
+	//	} while (!(pdata).compare_exchange_weak(pdata_old, pdata_new));
+	//	pdata_old.data->~vector();
+	//	mb.Store(pdata_old.data);
+	//}
+
+
+
+
+
+
+
+
+
 };
 
