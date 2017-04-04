@@ -105,6 +105,8 @@ public:
 		}
 	}
 
+
+	
 	void Insert(int const & v)
 	{
 		//std::vector<int> *pdata_new = nullptr, *pdata_old;
@@ -274,26 +276,27 @@ public:
 	//	std::vector<int>* test = pdata.load()->data;
 	//	int bob = test->at(0);
 
-		pdata_new = pdata;
+	//	pdata_new = pdata;
 		++pdata_new.count;
 		do
 		{
 			pdata_old = pdata;
 			pdata_new = pdata_old;
-			
+			//++pdata_new.count;
 
 		} while (!((pdata).compare_exchange_weak(pdata_new, pdata_old)));
 		//int out = pdata_new->data->at(pos);
 		
-		--pdata_old.count;
+		--pdata_new.count;
 		do
 		{
 			pdata_old = pdata;
 			pdata_new = pdata_old;
+		//	--pdata_new.count;
 			
 		} while (!((pdata).compare_exchange_weak(pdata_new, pdata_old)));
 
-		return pdata_new.data->at(pos);
+		return pdata.load().data->at(pos);
 	}
 	////const;
 	////Requires, bare minimum: Insert method, [] operator
