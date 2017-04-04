@@ -35,7 +35,7 @@ void read_position_0() {
 void test( int num_threads, int num_per_thread )
 {
     std::vector<std::thread> threads;
-//    lfsv.Insert( -1 );
+    lfsv.Insert( -1 );
 //	lfsv.Insert(0);
 //	lfsv.Insert(1);
 //	for(int i=0;i<3;i++)

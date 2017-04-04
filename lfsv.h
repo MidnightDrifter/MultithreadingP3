@@ -29,8 +29,8 @@ class MemoryBank {
 	std::deque< std::vector<int>* > slots;
 	std::mutex m;
 public:
-	MemoryBank() : slots(6000) {
-		for (int i = 0; i<6000; ++i) {
+	MemoryBank() : slots(60000) {
+		for (int i = 0; i<60000; ++i) {
 			slots[i] = reinterpret_cast<std::vector<int>*>(new char[sizeof(std::vector<int>)]);
 		}
 	}
@@ -64,11 +64,12 @@ class LFSV
 
 	MemoryBank mb;
 	std::atomic<Data> pdata;
+	std::mutex lockMutex;
 	//Data* pdata;
 	//std::mutex wr_mutex;
 public:
 
-	LFSV() : mb(),  pdata(new(mb.Get()) std::vector<int>) {
+	LFSV() : mb(),  pdata(new(mb.Get()) std::vector<int>), lockMutex() {
 		//std::cout << "Is lockfree " << pdata.is_lock_free() << std::endl;
 
 		//pdata = new Data();
@@ -197,8 +198,8 @@ public:
 		//        }
 		//        std::cout << "Size " << pdata_current->size() << " after inserting " << v << std::endl;
 	}
-
-
+//
+//
 
 
 	//void Insert(int const& v)
@@ -294,9 +295,118 @@ public:
 
 		return pdata_new.data->at(pos);
 	}
-	//const;
-	//Requires, bare minimum: Insert method, [] operator
-	//int operator[](int i) { return 0; }
-	//void Insert(int i){}
+	////const;
+	////Requires, bare minimum: Insert method, [] operator
+	////int operator[](int i) { return 0; }
+	////void Insert(int i){}
+
+
+
+//
+//
+//
+//void Insert(int const& v)
+//{
+//	Data old, fresh;
+//	old.count = 1;
+//	fresh.data = 0;
+//	fresh.count = 1;
+//	std::vector<int>* last = 0;
+//
+//
+//	do
+//	{
+//		old.data = pdata.load().data;
+//		if (last != old.data)
+//		{
+//			//delete fresh.data;
+//
+//
+//			fresh.data = new(mb.Get()) std::vector<int>(*old.data);
+//
+//			//fresh.data->insert(v);
+//
+//			std::vector<int>::iterator b = fresh.data->begin();
+//			std::vector<int>::iterator e = fresh.data->end();
+//			if (b == e || v >= fresh.data->back()) { fresh.data->push_back(v); } //first in empty or last element
+//			else {
+//				for (; b != e; ++b) {
+//					if (*b >= v) {
+//						fresh.data->insert(b, v);
+//						break;
+//					}
+//				}
+//			}
+//
+//
+//			last = old.data;
+//
+//			fresh.data->~vector();
+//			mb.Store(fresh.data);
+//		
+//		}
+//	} while (!(pdata).compare_exchange_weak(old, fresh));
+//	//delete old.data;
+//	old.data->~vector();
+//	mb.Store(old.data);
+//
+//
+//
+//}
+//
+//int const& operator[](int pos)
+//{
+//	Data old, fresh;
+//	do
+//	{
+//		old = pdata;
+//		fresh = old;
+//		fresh.count++;
+//		
+//	} while (!(pdata).compare_exchange_weak(old, fresh));
+//
+//	const int& out= fresh.data->at(pos);
+//
+//	do
+//	{
+//		old = pdata;
+//		fresh = old;
+//		fresh.count--;
+//	} while (!(pdata).compare_exchange_weak(old, fresh));
+//
+//	return out;
+//}
+
+
+
+//
+//
+//
+////Well, lock-full imiplementation seems to work without incurring the wrath of the timeouts?
+//
+//
+//void Insert(const int& v)
+//{
+//	std::lock_guard<std::mutex> lock(lockMutex);
+//				std::vector<int>::iterator b = pdata.load().data->begin();
+//				std::vector<int>::iterator e = pdata.load().data->end();
+//				if (b == e || v >= pdata.load().data->back()) { pdata.load().data->push_back(v); } //first in empty or last element
+//				else {
+//					for (; b != e; ++b) {
+//						if (*b >= v) {
+//							pdata.load().data->insert(b, v);
+//							break;
+//						}
+//					}
+//				}
+//}
+//
+//
+//const int& operator[](int pos)
+//{
+//	std::lock_guard<std::mutex> lock(lockMutex);
+//	return pdata.load().data->at(pos);
+//}
+
 };
 
