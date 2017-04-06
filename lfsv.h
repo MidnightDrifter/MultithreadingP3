@@ -1,283 +1,120 @@
-#pragma once
-#include <atomic>
-#include <thread>
-#include <chrono>
-#include <mutex>
-#include <iostream>
-#include <vector>
-#include <deque>
+#include <iostream>       // std::cout
+#include <atomic>         // std::atomic
+#include <thread>         // std::thread
+#include <vector>         // std::vector
+#include <deque>          // std::deque
+#include <mutex>          // std::mutex
+#include <cstring>
 
 
-//typedef std::pair<std::vector<int>*, unsigned int> Data;
-struct Data
-{
-	std::vector<int>* data;
-	int count;
-
-	Data(std::vector<int>* d) : data(d), count(1) {}
-	Data() : data(NULL), count(1) {}
 
 
-	void decrementCounter() { --count; }
-	void incrementCounter() { ++count; }
-};
-
-
-//std::atomic<int> counter(0);
-
+template< typename T, int NUMBER, unsigned SIZE >
 class MemoryBank {
-	std::deque< std::vector<int>* > slots;
+	std::deque< T* > slots;
 	std::mutex m;
 public:
-	MemoryBank() : slots(60000) {
-		for (int i = 0; i<60000; ++i) {
-			slots[i] = reinterpret_cast<std::vector<int>*>(new char[sizeof(std::vector<int>)]);
+	MemoryBank() : slots(NUMBER) {
+		for (int i = 0; i<NUMBER; ++i) {
+			slots[i] = reinterpret_cast<T*>(new char[SIZE]);
 		}
 	}
-	std::vector<int>* Get()
-	{
+	T* Get() {
 		std::lock_guard<std::mutex> lock(m);
-		std::vector<int>* p = slots[0];
+		T* p = slots[0];
 		slots.pop_front();
 		return p;
 	}
-
-
-	void Store(std::vector<int>* p)
-	{
+	void Store(T* p) {
+		std::memset(p, 0, SIZE); // clear data
 		std::lock_guard<std::mutex> lock(m);
 		slots.push_back(p);
 	}
-
-
 	~MemoryBank() {
 		for (auto & el : slots) { delete[] reinterpret_cast<char*>(el); }
 	}
 };
 
 
-class LFSV
-{
-//public:
-	//LFSV();
-	//~LFSV();
+class Pair {
+public:
+	int*    pointer;
+	int     size;
+	int count;
 
-	MemoryBank mb;
-	std::atomic<Data> pdata;
-	std::mutex lockMutex;
-	//Data* pdata;
-	//std::mutex wr_mutex;
+
+	Pair(int * p, int s, int c) : pointer(p), size(s), count(c) {}
+	Pair(int* p, int s) : pointer(p), size(s), count(1) {}
+	Pair() : pointer(NULL), size(0), count(1) {}
+	Pair(int* p) : pointer(p), size(0), count(1) {}
+
+	void incrementCount() { ++count; }
+	void decrementCount() { --count; }
+
+
+}; //  __attribute__((aligned(16),packed)); // bug in GCC 4.*, fixed in 5.1?
+   // alignment needed to stop std::atomic<Pair>::load to segfault
+
+class LFSV {
+	//    MemoryBank<std::vector<int>, 290000, sizeof(void*) > mb;
+	MemoryBank<int, 2000, sizeof(int[10000]) > mb2;
+	std::atomic< Pair > pdata;
 public:
 
-	LFSV() : mb(),  pdata(new(mb.Get()) std::vector<int>), lockMutex() {
-		//std::cout << "Is lockfree " << pdata.is_lock_free() << std::endl;
-
-		//pdata = new Data();
-		//pdata.load()->data = new(mb.Get()) std::vector<int>;
-
-		//std::vector<int>* test = pdata.load().data;
-	//	test->push_back(1);
-	//	test->erase(test->begin());
-	//	test = NULL;
-		//test->erase(test->front());
-		//std::cout << "Testing constructor, should get 1:  " << test->at(0) << std::endl;
-
-		//*(pdata.load()->data) = std::vector<int>();
-
-
-	
-
-		
-		//Ask about this constructor bit, not sure if the vector is created by the above 'new' call or not
-		//pdata.load()->count = 1;
-		//pdata.load()->data = new std::vector<int>();
+	LFSV() : mb2(), pdata(Pair(mb2.Get(), 0, 1)) {
 	}
 
 	~LFSV() {
-		//delete pdata.load(); 
-		//(pdata.load().count) = (pdata.load().count) - 1;
-		pdata.load().decrementCounter();
-		if (pdata.load().count <= 0)
-		{
-			pdata.load().data->~vector();
-			mb.Store(pdata.load().data);   //Double check this too, not sure what the mb.Store( ~~~ ) does
-			//delete pdata.load();
+		Pair temp = pdata.load();
+		int* p = temp.pointer;
+		//pdata.load().count--;
+		pdata.load().decrementCount();
+		if (p != nullptr && pdata.load().count <= 0) {
+			//            p->~vector();
+			mb2.Store(p);
 		}
 	}
 
-
-	
-	void Insert(int const & v)
-	{
-		//std::vector<int> *pdata_new = nullptr, *pdata_old;
-		Data  pdata_new,pdata_old;
+	void Insert(int const & v) {
+		Pair pdata_new, pdata_old;
+		pdata_new.pointer = nullptr;
 		do {
-			//	++counter;
+			//delete pdata_new.pointer;
+			if (pdata_new.pointer != nullptr) {
+				//                pdata_new.pointer->~vector();
+				mb2.Store(pdata_new.pointer);
+			}
+			pdata_old = pdata.load();
 
-			//delete pdata_new;
-		//	if (pdata_new.data) {
-				//pdata_new->~vector(); //TODO causes mem errors sometimes 
-				//mb.Store(pdata_new);
+			pdata_new.size = pdata_old.size;
+			//            pdata_new.pointer   = new (mb.Get()) std::vector<int>( *pdata_old.pointer );
+			pdata_new.pointer = mb2.Get();
+			std::memcpy(pdata_new.pointer, pdata_old.pointer, pdata_new.size * sizeof(int));
 
-		//		pdata_new.data->~vector();
-		//		mb.Store(pdata_new.data);
-		//	}
-			//std::vector<int>* t = pdata.load().data;
-			//pdata.incrementCounter();
-			
-			pdata_old = pdata;
-			//	pdata_new = new (mb.Get()) std::vector<int>(*pdata_old);
-			//++pdata_old.count;
-			pdata_new.data = new(mb.Get()) std::vector<int>(*(pdata_old.data));
-			//pdata_new.incrementCounter();
-			//std::vector<int>::iterator b = pdata_new->begin();
-			//std::vector<int>::iterator e = pdata_new->end();
+			int * a = pdata_new.pointer;
+			a[pdata_new.size] = v; // add new value in the end
 
-			std::vector<int>::iterator b = pdata_new.data->begin();
-			std::vector<int>::iterator e = pdata_new.data->end();
-			//if (b == e || v >= pdata_new->back()) { pdata_new->push_back(v); } //data in empty or last element
-			//else {
-			//	for (; b != e; ++b) {
-			//		if (*b >= v) {
-			//			pdata_new->insert(b, v);
-			//			break;
-			//		}
-			//	}
-			//}
-
-			if (b == e || v >= pdata_new.data->back()) { pdata_new.data->push_back(v); } //data in empty or last element
-			else {
-				for (; b != e; ++b) {
-					if (*b >= v) {
-						pdata_new.data->insert(b, v);
-						break;
+			for (int i = 0; i<pdata_new.size; ++i) {
+				if (a[i] >= v) {
+					for (int j = pdata_new.size; j>i; --j) {
+						std::swap(a[j], a[j - 1]); // move new element to proper position
 					}
+					break;
 				}
 			}
-			//            std::lock_guard< std::mutex > write_lock( wr_mutex );
-			//            std::cout << "insert " << v << "(attempt " << counter << ")" << std::endl;
-		} while (!(this->pdata).compare_exchange_weak(pdata_old, pdata_new));
-		// if we use a simple "delete pdata_old" here, crash is almost guaranteed
-		// the cause of the problem is ABA
-		// using MemoryBank KIND OF solves it (for demo purposes only!)
-		// it uses deque to store "std::vector<int>*", adds in the back, removes from front
-		// this way there is some time before we get the same address back, so we home 
-		// we will never see the same address again (ABA) in one call to Insert
-
-		//pdata_old->~vector(); //TODO causes mem errors sometimes 
-		//mb.Store(pdata_old);
-		//std::vector<int>* temp = this->pdata.load().data;
-		//std::cout << temp->at(0) << ", array size, " << temp->size() << std::endl;
-		
-
-	//	pdata_old.decrementCounter();
-	//	if (pdata_old.count == 0)
-	//	{
-	//		pdata_old.data->~vector();
-	//		mb.Store(pdata_old.data);
-	//	}
-//		pdata_old.decrementCounter();
-
-			pdata_old.data->~vector();
-			mb.Store(pdata_old.data);
-
-	//	--pdata_old.count;
-	//	if (pdata_old.count == 0)
-	//	{
-	//		pdata_old.data->~vector();
-	//		mb.Store(pdata_old.data);
-			//delete pdata_old;
-	//	}
-
-
-
-		//        std::lock_guard< std::mutex > write_lock( wr_mutex );
-		//        std::vector<int> * pdata_current = pdata;
-		//        std::vector<int>::iterator b = pdata_current->begin();
-		//        std::vector<int>::iterator e = pdata_current->end();
-		//        for ( ; b!=e; ++b ) {
-		//            std::cout << *b << ' ';
-		//        }
-		//        std::cout << "Size " << pdata_current->size() << " after inserting " << v << std::endl;
+			++pdata_new.size; // set new size
+		} while (!(this->pdata).compare_exchange_strong(pdata_old, pdata_new));
+		//delete pdata_old.pointer;
+		//pdata_old.pointer->~vector();
+		mb2.Store(pdata_old.pointer);
 	}
-//
-//
 
+	int operator[] (int pos) { // not a const method anymore
+							   //     int ret_val = pdata.load().pointer[pos]; 
+							   //     return ret_val;
 
-	//void Insert(int const& v)
-	//{
-
-	//	Data pdata_old, pdata_new;
-	//	std::vector<int>* last = NULL;
-	//	
-	//	
-	//	//Maybe move this into the loop?
-	//
-	//	pdata_old.data = pdata.load().data;
-	//	if (last != pdata_old.data)
-	//	{
-	//		//delete pdata_new.data;
-	//		pdata_new.data->~vector();
-	//		mb.Store(pdata_new.data);
-	//		pdata_new.data = new(mb.Get()) std::vector<int>(*pdata_old.data);
-	//		last = pdata_old.data;
-
-	//	}
-
-	//	do
-	//	{
-	//		pdata_old.data = pdata.load().data;
-	//		if (last != pdata_old.data)
-	//		{
-	//			//delete pdata_new.data;
-	//			pdata_new.data->~vector();
-	//			mb.Store(pdata_new.data);
-	//			pdata_new.data = new(mb.Get()) std::vector<int>(*pdata_old.data);
-	//			last = pdata_old.data;
-
-	//		}
-
-
-	//		            std::vector<int>::iterator b = pdata_new.data->begin();
-	//		            std::vector<int>::iterator e = pdata_new.data->end();
-	//		            if ( b==e || v>=pdata_new.data->back() ) { pdata_new.data->push_back( v ); } //first in empty or last element
-	//		            else {
-	//		                for ( ; b!=e; ++b ) {
-	//		                    if ( *b >= v ) {
-	//		                        pdata_new.data->insert( b, v );
-	//		                        break;
-	//		                    }
-	//		                }
-	//		            }
-	//		//            std::lock_guard< std::mutex > write_lock( wr_mutex );
-	//		//            std::cout << "insert " << v << "(attempt " << counter << ")" << std::endl;
-	//		       
-
-	//	} while (!(pdata.compare_exchange_weak(pdata_old, pdata_new)));
-
-	//	pdata_old.data->~vector();
-	//	mb.Store(pdata_old.data);
-
-
-	//}
-
-
-
-	int const& operator[] (int pos)
-	{
-		//return (*pdata.load()->data)[pos];
-
-
-
-		Data pdata_new, pdata_old;
-	//	std::vector<int>* temp = pdata.load().data;
-		//std::cout << temp->at(0) << "v2 " << std::endl;
-		//Test that pdata is still legitimate
-	//	std::vector<int>* test = pdata.load()->data;
-	//	int bob = test->at(0);
-
-	//	pdata_new = pdata;
-		++pdata_new.count;
+		Pair pdata_new, pdata_old;
+		pdata_new.incrementCount();
 		do
 		{
 			pdata_old = pdata;
@@ -285,131 +122,17 @@ public:
 			//++pdata_new.count;
 
 		} while (!((pdata).compare_exchange_weak(pdata_new, pdata_old)));
-		//int out = pdata_new->data->at(pos);
-		
-		--pdata_new.count;
+
+		pdata_new.decrementCount();
 		do
 		{
 			pdata_old = pdata;
 			pdata_new = pdata_old;
-		//	--pdata_new.count;
-			
+			//	--pdata_new.count;
+
 		} while (!((pdata).compare_exchange_weak(pdata_new, pdata_old)));
 
-		return pdata.load().data->at(pos);
+		return pdata.load().pointer[pos];
+
 	}
-	////const;
-	////Requires, bare minimum: Insert method, [] operator
-	////int operator[](int i) { return 0; }
-	////void Insert(int i){}
-
-
-
-//
-//
-//
-//void Insert(int const& v)
-//{
-//	Data old, fresh;
-//	old.count = 1;
-//	fresh.data = 0;
-//	fresh.count = 1;
-//	std::vector<int>* last = 0;
-//
-//
-//	do
-//	{
-//		old.data = pdata.load().data;
-//		if (last != old.data)
-//		{
-//			//delete fresh.data;
-//
-//
-//			fresh.data = new(mb.Get()) std::vector<int>(*old.data);
-//
-//			//fresh.data->insert(v);
-//
-//			std::vector<int>::iterator b = fresh.data->begin();
-//			std::vector<int>::iterator e = fresh.data->end();
-//			if (b == e || v >= fresh.data->back()) { fresh.data->push_back(v); } //first in empty or last element
-//			else {
-//				for (; b != e; ++b) {
-//					if (*b >= v) {
-//						fresh.data->insert(b, v);
-//						break;
-//					}
-//				}
-//			}
-//
-//
-//			last = old.data;
-//
-//			fresh.data->~vector();
-//			mb.Store(fresh.data);
-//		
-//		}
-//	} while (!(pdata).compare_exchange_weak(old, fresh));
-//	//delete old.data;
-//	old.data->~vector();
-//	mb.Store(old.data);
-//
-//
-//
-//}
-//
-//int const& operator[](int pos)
-//{
-//	Data old, fresh;
-//	do
-//	{
-//		old = pdata;
-//		fresh = old;
-//		fresh.count++;
-//		
-//	} while (!(pdata).compare_exchange_weak(old, fresh));
-//
-//	const int& out= fresh.data->at(pos);
-//
-//	do
-//	{
-//		old = pdata;
-//		fresh = old;
-//		fresh.count--;
-//	} while (!(pdata).compare_exchange_weak(old, fresh));
-//
-//	return out;
-//}
-
-
-
-//
-//
-//
-////Well, lock-full imiplementation seems to work without incurring the wrath of the timeouts?
-//
-//
-//void Insert(const int& v)
-//{
-//	std::lock_guard<std::mutex> lock(lockMutex);
-//				std::vector<int>::iterator b = pdata.load().data->begin();
-//				std::vector<int>::iterator e = pdata.load().data->end();
-//				if (b == e || v >= pdata.load().data->back()) { pdata.load().data->push_back(v); } //first in empty or last element
-//				else {
-//					for (; b != e; ++b) {
-//						if (*b >= v) {
-//							pdata.load().data->insert(b, v);
-//							break;
-//						}
-//					}
-//				}
-//}
-//
-//
-//const int& operator[](int pos)
-//{
-//	std::lock_guard<std::mutex> lock(lockMutex);
-//	return pdata.load().data->at(pos);
-//}
-
 };
-
