@@ -48,6 +48,7 @@ public:
 	Pair() : pointer(NULL), size(0), count(1) {}
 	Pair(int* p) : pointer(p), size(0), count(1) {}
 
+
 	void incrementCount() { ++count; }
 	void decrementCount() { --count; }
 
@@ -75,6 +76,33 @@ public:
 		}
 	}
 
+
+
+	/*
+	
+	void Update(const K& k,const V& v) {
+Data old;
+Data fresh;
+old.second = 1;
+fresh.first = 0;
+fresh.second = 1;
+Map<K, V>* last = 0;
+do {
+	old.first = data_.first;
+	if (last != old.first) 
+		{
+		delete fresh.first;
+		fresh.first = new Map<K, V>(old.first);
+		fresh.first->insert(make_pair(k, v));
+		last = old.first;
+		}
+	} while (!CAS(&data_, old, fresh));
+delete old.first; // whew
+}
+	
+	
+	*/
+
 	void Insert(int const & v) {
 		Pair pdata_new, pdata_old;
 		pdata_new.pointer = nullptr;
@@ -85,8 +113,9 @@ public:
 				mb2.Store(pdata_new.pointer);
 			}
 			pdata_old = pdata.load();
-
+			pdata_old.count = 1;  //Get rid of this potentially
 			pdata_new.size = pdata_old.size;
+			pdata_new.count = 1;  //And this potentially
 			//            pdata_new.pointer   = new (mb.Get()) std::vector<int>( *pdata_old.pointer );
 			pdata_new.pointer = mb2.Get();
 			std::memcpy(pdata_new.pointer, pdata_old.pointer, pdata_new.size * sizeof(int));
@@ -120,6 +149,7 @@ public:
 			pdata_old = pdata;
 			pdata_new = pdata_old;
 			//++pdata_new.count;
+		//	pdata_new.incrementCount();
 
 		} while (!((pdata).compare_exchange_weak(pdata_new, pdata_old)));
 
@@ -129,6 +159,7 @@ public:
 			pdata_old = pdata;
 			pdata_new = pdata_old;
 			//	--pdata_new.count;
+		//	pdata_new.decrementCount();
 
 		} while (!((pdata).compare_exchange_weak(pdata_new, pdata_old)));
 
